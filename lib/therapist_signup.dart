@@ -1,30 +1,31 @@
 import 'package:flutter/material.dart';
-//import 'package:http/http.dart' as http;
+import 'package:http/http.dart' as http;
+import 'package:sukoon_app/Signup.dart';
 import 'dart:convert';
 
-import 'Signin.dart';
-
-class Signup extends StatefulWidget {
-  const Signup({super.key});
+class therapist_signup extends StatefulWidget {
+  const therapist_signup({super.key});
 
   @override
-  State<Signup> createState() => _SignupState();
+  State<therapist_signup> createState() => _PartnerSignupState();
 }
 
-class _SignupState extends State<Signup> {
+class _PartnerSignupState extends State<therapist_signup> {
   final GlobalKey<FormState> _form = GlobalKey<FormState>();
 
+  // Therapist fields matching your database
   final TextEditingController _firstname = TextEditingController();
   final TextEditingController _lastname = TextEditingController();
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
   final TextEditingController _confirmPassword = TextEditingController();
   final TextEditingController _phone = TextEditingController();
-  final TextEditingController _location = TextEditingController();
+  final TextEditingController _number =
+      TextEditingController(); // Additional number
+  final TextEditingController _certificate = TextEditingController();
+  final TextEditingController _workplace = TextEditingController();
   final TextEditingController _username = TextEditingController();
-  final TextEditingController _age = TextEditingController();
 
-  String? _selectedGender;
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
@@ -37,67 +38,61 @@ class _SignupState extends State<Signup> {
     _password.dispose();
     _confirmPassword.dispose();
     _phone.dispose();
-    _location.dispose();
+    _number.dispose();
+    _certificate.dispose();
+    _workplace.dispose();
     _username.dispose();
-    _age.dispose();
     super.dispose();
   }
 
   Future<void> _signup() async {
     if (!_form.currentState!.validate()) return;
 
-    if (_selectedGender == null) {
-      _showSnackbar("Please select a gender.", isError: true);
-      return;
-    }
-
     setState(() => _isLoading = true);
 
     try {
-      final response = await http
-          .post(
-            Uri.parse(
-              "http://169.254.23.133/16/sukoon_website/user/signup.php",
-            ), //
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded", //
-            },
-            body: {
-              "firstname": _firstname.text.trim(),
-              "lastname": _lastname.text.trim(),
-              "username": _username.text.trim(),
-              "age": _age.text.trim(),
-              "phone_number": _phone.text.trim(),
-              "gender": _selectedGender ?? "",
-              "location": _location.text.trim(),
-              "email": _email.text.trim(),
-              "password": _password.text,
-            },
-          )
-          .timeout(const Duration(seconds: 10)); // ✅ ADDED
+      print("Sending data to server...");
 
-      print("RESPONSE: ${response.body}"); // ✅ DEBUG
+      final response = await http.post(
+        Uri.parse(
+          "http://localhost/sukoon_website/therapist/therapist_form.php",
+        ),
+        body: {
+          "firstname": _firstname.text.trim(),
+          "lastname": _lastname.text.trim(),
+          "username": _username.text.trim(),
+          "phone": _phone.text.trim(),
+          "number": _number.text.trim(),
+          "email": _email.text.trim(),
+          "certificate": _certificate.text.trim(),
+          "workplace": _workplace.text.trim(),
+          "password": _password.text,
+        },
+      );
+
+      print("Response status: ${response.statusCode}");
+      print("Response body: ${response.body}");
 
       final data = jsonDecode(response.body);
 
       if (!mounted) return;
 
-      if (response.statusCode == 200 && data["status"] == "success") {
-        _showSnackbar("Account created! Please sign in.", isError: false);
-
+      if (data["status"] == "success") {
+        _showSnackbar(
+          "Therapist account created! Please sign in.",
+          isError: false,
+        );
         await Future.delayed(const Duration(seconds: 1));
-
         if (!mounted) return;
-
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const Signin()),
+          MaterialPageRoute(builder: (_) => const therapist_signup()),
         );
       } else {
-        _showSnackbar(data["message"] ?? "Signup failed", isError: true);
+        _showSnackbar(data["message"], isError: true);
       }
     } catch (e) {
-      print("ERROR: $e"); // ✅ DEBUG
+      print("Connection error: $e");
       _showSnackbar("Connection error. Please try again.", isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -108,9 +103,8 @@ class _SignupState extends State<Signup> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError
-            ? Colors.red.shade700
-            : const Color(0xFF0D5C63),
+        backgroundColor:
+            isError ? Colors.red.shade700 : const Color(0xFF0D5C63),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -123,18 +117,18 @@ class _SignupState extends State<Signup> {
       backgroundColor: const Color(0xFFFFFFFA),
       body: Column(
         children: [
-          // ── TOP: Gradient header with logo (matches Figma Rectangle 22) ──
+          // ── TOP: Gradient header with logo ──
           Container(
             width: double.infinity,
-            height: 260,
+            height: 240,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color(0xFF0D5C63), // top
-                  Color(0xFF247B7B), // middle
-                  Color(0xFF44A1A0), // bottom
+                  Color(0xFF0D5C63),
+                  Color(0xFF247B7B),
+                  Color(0xFF44A1A0),
                 ],
                 stops: [0.02, 0.47, 0.92],
               ),
@@ -144,12 +138,13 @@ class _SignupState extends State<Signup> {
                 child: Image.asset(
                   "images/logo_white.png",
                   errorBuilder: (context, error, stackTrace) {
-                    return Text(
-                      "Error: $error",
-                    ); // this will show you the exact problem
+                    return const Text(
+                      "Logo not found",
+                      style: TextStyle(color: Colors.white),
+                    );
                   },
-                  width: 187,
-                  height: 187,
+                  width: 160,
+                  height: 160,
                   fit: BoxFit.contain,
                 ),
               ),
@@ -165,25 +160,34 @@ class _SignupState extends State<Signup> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // "Sign Up" title
+                    // "Therapist Registration" title
                     const Text(
-                      "Sign Up",
+                      "Therapist Registration",
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 28,
+                        fontSize: 24,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFF0D5C63),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
+                    const Text(
+                      "Join as a mental health professional",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
 
                     // Email — full width
                     _buildField(
                       controller: _email,
-                      label: "Email",
+                      label: "Email Address *",
                       keyboardType: TextInputType.emailAddress,
                       validator: (v) {
-                        if (v!.isEmpty) return "Required";
+                        if (v!.isEmpty) return "Email is required";
                         if (!v.contains("@")) return "Enter a valid email";
                         return null;
                       },
@@ -196,7 +200,7 @@ class _SignupState extends State<Signup> {
                         Expanded(
                           child: _buildField(
                             controller: _firstname,
-                            label: "First Name",
+                            label: "First Name *",
                             validator: (v) => v!.isEmpty ? "Required" : null,
                           ),
                         ),
@@ -204,7 +208,7 @@ class _SignupState extends State<Signup> {
                         Expanded(
                           child: _buildField(
                             controller: _lastname,
-                            label: "Last Name",
+                            label: "Last Name *",
                             validator: (v) => v!.isEmpty ? "Required" : null,
                           ),
                         ),
@@ -212,38 +216,67 @@ class _SignupState extends State<Signup> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Username | Age
+                    // Username | Phone
                     Row(
                       children: [
                         Expanded(
                           child: _buildField(
                             controller: _username,
-                            label: "Username",
+                            label: "Username *",
                             validator: (v) => v!.isEmpty ? "Required" : null,
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: _buildField(
-                            controller: _age,
-                            label: "Age",
-                            keyboardType: TextInputType.number,
-                            validator: (v) => v!.isEmpty ? "Required" : null,
+                            controller: _phone,
+                            label: "Phone Number",
+                            keyboardType: TextInputType.phone,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
 
+                    // Additional Number | Certificate
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildField(
+                            controller: _number,
+                            label: "Additional Number",
+                            keyboardType: TextInputType.phone,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildField(
+                            controller: _certificate,
+                            label: "Certificate/License",
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Workplace — full width
+                    _buildField(
+                      controller: _workplace,
+                      label: "Workplace/Clinic",
+                    ),
+                    const SizedBox(height: 16),
+
                     // Password — full width
                     _buildPasswordField(
                       controller: _password,
-                      label: "Password",
+                      label: "Password *",
                       obscure: _obscurePassword,
-                      toggleObscure: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
+                      toggleObscure:
+                          () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                       validator: (v) {
-                        if (v!.isEmpty) return "Required";
+                        if (v!.isEmpty) return "Password is required";
                         if (v.length < 6) return "Minimum 6 characters";
                         return null;
                       },
@@ -253,143 +286,25 @@ class _SignupState extends State<Signup> {
                     // Confirm Password — full width
                     _buildPasswordField(
                       controller: _confirmPassword,
-                      label: "Confirm Password",
+                      label: "Confirm Password *",
                       obscure: _obscureConfirm,
-                      toggleObscure: () =>
-                          setState(() => _obscureConfirm = !_obscureConfirm),
+                      toggleObscure:
+                          () => setState(
+                            () => _obscureConfirm = !_obscureConfirm,
+                          ),
                       validator: (v) {
-                        if (v!.isEmpty) return "Required";
+                        if (v!.isEmpty) return "Please confirm password";
                         if (v != _password.text)
                           return "Passwords do not match";
                         return null;
                       },
                     ),
-                    const SizedBox(height: 12),
-
-                    // Phone Number | Upload Image
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildField(
-                            controller: _phone,
-                            label: "Phone Number",
-                            keyboardType: TextInputType.phone,
-                            validator: (v) => v!.isEmpty ? "Required" : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // "+ Upload Image" button (Figma Frame 17)
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              // TODO: plug in image_picker package here
-                            },
-                            child: Container(
-                              height: 54,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFFFFA),
-                                border: Border.all(
-                                  color: const Color(0xFF247B7B),
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              alignment: Alignment.centerLeft,
-                              padding: const EdgeInsets.only(left: 16),
-                              child: const Text(
-                                "+ Upload Image",
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 14,
-                                  color: Color(0xFF0D5C63),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Location | Gender radio buttons
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: _buildField(
-                            controller: _location,
-                            label: "Location",
-                            validator: null, // optional
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-
-                        // Gender section (matches Figma Ellipse 45 & 46)
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Gender:",
-                                style: TextStyle(
-                                  fontFamily: 'Roboto',
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0D5C63),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  // Female
-                                  Radio<String>(
-                                    value: "Female",
-                                    groupValue: _selectedGender,
-                                    activeColor: const Color(0xFF0D5C63),
-                                    materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                    onChanged: (v) =>
-                                        setState(() => _selectedGender = v),
-                                  ),
-                                  const Text(
-                                    "Female",
-                                    style: TextStyle(
-                                      fontFamily: 'Roboto',
-                                      fontSize: 13,
-                                      color: Color(0xFF0D5C63),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  // Male
-                                  Radio<String>(
-                                    value: "Male",
-                                    groupValue: _selectedGender,
-                                    activeColor: const Color(0xFF0D5C63),
-                                    materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                    onChanged: (v) =>
-                                        setState(() => _selectedGender = v),
-                                  ),
-                                  const Text(
-                                    "Male",
-                                    style: TextStyle(
-                                      fontFamily: 'Roboto',
-                                      fontSize: 13,
-                                      color: Color(0xFF0D5C63),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
                     const SizedBox(height: 24),
 
-                    // Create Account button (matches Figma Frame 7)
+                    // Create Account button
                     SizedBox(
                       width: double.infinity,
-                      height: 45,
+                      height: 50,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF247B7B),
@@ -399,24 +314,25 @@ class _SignupState extends State<Signup> {
                           ),
                         ),
                         onPressed: _isLoading ? null : _signup,
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2.5,
+                        child:
+                            _isLoading
+                                ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                                : const Text(
+                                  "Register as Therapist",
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFFFFFFFA),
+                                  ),
                                 ),
-                              )
-                            : const Text(
-                                "Create Account",
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFFFFFFFA),
-                                ),
-                              ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -426,7 +342,7 @@ class _SignupState extends State<Signup> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Text(
-                          "Already Have An Account? ",
+                          "Already have an account? ",
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 14,
@@ -437,7 +353,7 @@ class _SignupState extends State<Signup> {
                           onTap: () {
                             Navigator.pushReplacement(
                               context,
-                              MaterialPageRoute(builder: (_) => const Signin()),
+                              MaterialPageRoute(builder: (_) => const Signup()),
                             );
                           },
                           child: const Text(
@@ -451,6 +367,16 @@ class _SignupState extends State<Signup> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      "* Required fields",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        color: Colors.grey,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ],
                 ),
