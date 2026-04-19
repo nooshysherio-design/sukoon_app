@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sukoon_app/therapist_form.dart';
 import 'package:sukoon_app/therapist_home.dart';
 import 'dart:convert';
-import 'config.dart';
 import 'signup.dart';
 import 'userhome.dart';
 
